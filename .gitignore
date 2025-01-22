@@ -1,0 +1,7 @@
+*.o
+*.cof
+*.hex
+*.elf
+nbproject/private/
+dist/
+build/
