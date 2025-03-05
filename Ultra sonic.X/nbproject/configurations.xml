@@ -20,10 +20,10 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>Ultra sonic.c</itemPath>
       <itemPath>i2c_avr128db28.c</itemPath>
       <itemPath>font.c</itemPath>
       <itemPath>lcd.c</itemPath>
+      <itemPath>ultra_sonic.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
@@ -34,7 +34,7 @@
         <targetDevice>AVR128DB28</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>noID</platformTool>
+        <platformTool>snap</platformTool>
         <languageToolchain>XC8</languageToolchain>
         <languageToolchainVersion>3.00</languageToolchainVersion>
         <platform>3</platform>
