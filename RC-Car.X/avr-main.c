@@ -39,18 +39,19 @@ int main(void) {
     
     // CCMP High byte is the duty and low is the period
     
-    TCB0.CCMPH = 25;    // 50% duty
-    TCB0.CCMPL = 50;    // 0.5Mhz / 50 = 10,000 Hz
+    TCB0.CCMPL = 255;   // 4MHz / 255 = 15686 Hz      // LOW MUST BE SET FIRST
+    TCB0.CCMPH = 64;    // 25% duty
+
+    TCB1.CCMPL = 255;    // 4MHz / 255 = 15686 Hz      
+    TCB1.CCMPH = 191;    // 75% duty
     
-    TCB1.CCMPH = 25;    // 50% duty
-    TCB1.CCMPL = 50;    // 0.5Mhz / 50 = 10,000 Hz
-    
+    TCB2.CCMPL = 50;    // 4MHz / 50 = 10,000 Hz      
     TCB2.CCMPH = 25;    // 50% duty
-    TCB2.CCMPL = 50;    // 0.5Mhz / 50 = 10,000 Hz
+
     
-    TCB0.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);     // 0.5Mhz clk and enable TCB
-    TCB1.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);
-    TCB2.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);
+    TCB0.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);     // 4MHz clk and enable TCB
+    TCB1.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);
+    TCB2.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);
     
     
     PORTA.DIRSET = PIN2_bm;

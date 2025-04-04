@@ -14,7 +14,8 @@ void i2c_init(void) {
 
     
     // Set SDA and SCL as outputs
-    PORTA.DIRSET = PIN2_bm | PIN3_bm;       // page 164 of data sheet (default TWI0 pins PA2, PA3)
+    PORTMUX.TWIROUTEA = 0x2;
+    PORTC.DIRSET = PIN2_bm | PIN3_bm;       // page 164 of data sheet (ALT TWI0 pins PC2, PC3)
 }
 
 
