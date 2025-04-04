@@ -23,7 +23,7 @@ int main(void) {
     TCA0.SINGLE.PER = 625;                      // Frequency set to 50 Hz page 236: (31250/625) 625, being the PER value
     TCA0.SINGLE.CMP0 = 31;                      // Set to 5% duty cycle (31 is left, 47 middle, 63 is left)
     TCA0.SINGLE.CMP1 = 47;                      // 7.5% duty cycle for PA5 (Servo middle)
-    PORTA.DIRSET = PIN0_bm;                      // PA0 and PA5 set as output
+    PORTA.DIRSET = PIN0_bm;                      // PA0 set as output
     PORTA.DIRSET = PIN4_bm;
     
     // Enable global interrupts.

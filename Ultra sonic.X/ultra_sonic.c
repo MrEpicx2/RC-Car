@@ -19,7 +19,7 @@ int main(void) {
     while (CLKCTRL.MCLKSTATUS & 0b00000001) {
     }
     
-     TCA0.SINGLE.CTRLA = 0b00001001;         // Counter frequency set to 0.5MHz
+    TCA0.SINGLE.CTRLA = 0b00001001;         // Counter frequency set to 0.5MHz
     
     // We will manually check the timer and reset the timer
     // so set the period to its max value to avoid an automatic
