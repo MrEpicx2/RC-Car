@@ -11,6 +11,87 @@
 #include <util/delay.h>
 #include <stdbool.h>
 
+typedef struct {
+    bool current;
+    bool previous;
+} ButtonState;
+
+//***********************************************GLOBALS******************************************************** 
+
+ButtonState button1 = {0};
+ButtonState button2 = {0};
+ButtonState button3 = {0};
+ButtonState button4 = {0};
+
+bool fwd_on = false;
+bool bwd_on = false;
+
+
+bool is_button_pressed(ButtonState *btn) {
+    return btn->current && !btn->previous;
+}
+
+bool is_button_released(ButtonState *btn) {
+    return !btn->current && btn->previous;
+}
+
+bool is_button_held(ButtonState *btn) {
+    return btn->current && btn->previous;
+}
+
+void update_button_state(ButtonState *btn, volatile uint8_t *port_in, uint8_t pin_mask) {
+    btn->previous = btn->current;
+    btn->current = (*port_in & pin_mask);
+}
+
+void bwd(uint8_t mode) {
+    if (mode == 1) {
+        TCB0.CCMPH = 102;
+
+        for (uint8_t duty = 102; duty <= 254; duty++) {
+            TCB0.CCMPH = duty;
+            _delay_ms(10);
+        }
+        bwd_on = true;
+    }
+    
+    else if (mode == 0){
+        TCB0.CCMPH = 0;
+        bwd_on = false;
+    }
+}
+
+void fwd(uint8_t mode) {
+    if (mode == 1) {
+        TCB1.CCMPH = 102;
+
+        for (uint8_t duty = 102; duty <= 254; duty++) {
+            TCB1.CCMPH = duty;
+            _delay_ms(10);
+        }
+        fwd_on = true;
+    }
+    
+    else if (mode == 0){
+        TCB1.CCMPH = 0;
+        fwd_on = false;
+    }
+}
+
+void servo_right(void){
+    for (uint16_t servo_pos = 4800; servo_pos >= 1719; servo_pos--) {
+        TCA0.SINGLE.CMP1 = servo_pos / 100;
+        _delay_ms(1);
+    }
+}
+
+void servo_left(void) {
+    for (uint16_t servo_pos = 4800; servo_pos <= 8124; servo_pos++) {
+        TCA0.SINGLE.CMP1 = servo_pos / 100;
+        _delay_ms(1);
+    }
+}
+
 int main(void) {    
     CCP = 0xD8;                 // unlock protected I/O registers - page 41
     CLKCTRL.OSCHFCTRLA = 0x14;  // Clock set to 8 MHz
@@ -35,8 +116,8 @@ int main(void) {
     
     // Motor 1 on TCB0 (PA2) Motor 2 on TCB1 (PA3) and speaker on TCB2 (PC0)
     
-    TCB0.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA2
-    TCB1.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA3
+    TCB0.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA2 H-
+    TCB1.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA3 H+
     TCB2.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PC0
     
     // CCMP High byte is the duty and low is the period
@@ -65,75 +146,62 @@ int main(void) {
     PORTA.DIRSET = 0b11110000;  // PA4-7 as output
     PORTD.DIRCLR = 0b00001111;  // PD1-4 as input
     
-    int8_t servo_pos = 0;
+    uint8_t servo_pos = 0;
     
     while (1) {
-       if (PORTD.IN & PIN1_bm) {        // servo right
+        update_button_state(&button2, &PORTD.IN, PIN2_bm);   // right check
+        
+        if (is_button_pressed(&button2) && !fwd_on) {        // servo right plus move forward
            PORTA.OUTSET = PIN4_bm;
-           _delay_ms(2000);
-           PORTA.OUTCLR = PIN4_bm;
            
-           if (servo_pos < 5) {
-               switch (servo_pos) {
-                   case 0:
-                       TCA0.SINGLE.CMP1 = 1718 / 100;   // min
-                       break;
-                   case 1:
-                       TCA0.SINGLE.CMP1 = 3203 / 100;   // min + 45°
-                       break;
-                   case 2:
-                       TCA0.SINGLE.CMP1 = 4800 / 100;   // 0
-                       break;
-                   case 3:
-                       TCA0.SINGLE.CMP1 = 6406 / 100;   // 0 + 45°
-                       break;
-                   case 4:
-                       TCA0.SINGLE.CMP1 = 8125 / 100;   // max
-                       break;
-               }
-               servo_pos++;
-               if (servo_pos == 5) servo_pos = 4;
-            }
-       }
-       if (PORTD.IN & PIN2_bm) {    // servo left
-           PORTA.OUTSET = PIN5_bm;
-           _delay_ms(2000);
-           PORTA.OUTCLR = PIN5_bm;
+           fwd(1);
+           servo_right();  
+        }
+        
+        else if (is_button_released(&button2)) {
+            fwd(0);
+            TCA0.SINGLE.CMP1 = 4800 / 100;
+            PORTA.OUTCLR = PIN4_bm;
+        }
+        
+        
+        update_button_state(&button1, &PORTD.IN, PIN1_bm);   // left check
+        
+        if (is_button_pressed(&button1) && !fwd_on) {
+            PORTA.OUTSET = PIN5_bm;
+            
+            fwd(1);
+            servo_left();
+        }
+        
+        else if (is_button_released(&button1)) {
+            fwd(0);
+            TCA0.SINGLE.CMP1 = 4800 / 100;
+            PORTA.OUTCLR = PIN5_bm;
+        }
+       
+        update_button_state(&button3, &PORTD.IN, PIN3_bm);   // fwd check
+
+        if (is_button_pressed(&button3) && !fwd_on) {
+            PORTA.OUTSET = PIN6_bm;
+            fwd(1);
+        }
+        
+        else if (is_button_released(&button3)) {
+            fwd(0);
+            PORTA.OUTCLR = PIN6_bm;
+        }   
            
-           if (servo_pos >= 0) {
-               switch (servo_pos) {
-                   case 0:
-                       TCA0.SINGLE.CMP1 = 1718 / 100;   // min
-                       break;
-                   case 1:
-                       TCA0.SINGLE.CMP1 = 3203 / 100;   // min + 45°
-                       break;
-                   case 2:
-                       TCA0.SINGLE.CMP1 = 4800 / 100;   // 0
-                       break;
-                   case 3:
-                       TCA0.SINGLE.CMP1 = 6406 / 100;   // 0 + 45°
-                       break;
-                   case 4:
-                       TCA0.SINGLE.CMP1 = 8125 / 100;   // max
-                       break;
-               }
-               servo_pos--;
-               if (servo_pos == -1) servo_pos = 0;
-            }
-       } 
-       
-       if (PORTD.IN & PIN3_bm) {
-           PORTA.OUTSET = PIN6_bm;
-           _delay_ms(2000);
-           PORTA.OUTCLR = PIN6_bm;
-       } 
-       
-       if (PORTD.IN & PIN4_bm) {
-           PORTA.OUTSET = PIN7_bm;
-           _delay_ms(2000);
-           PORTA.OUTCLR = PIN7_bm;
+        update_button_state(&button4, &PORTD.IN, PIN4_bm);   // bwd check
+
+        if (is_button_pressed(&button4) && !bwd_on) {
+            PORTA.OUTSET = PIN7_bm;
+            bwd(1);
         } 
+        else if (is_button_released(&button4)) {
+            bwd(0);
+            PORTA.OUTCLR = PIN7_bm;
+        }
         
     }
 }
