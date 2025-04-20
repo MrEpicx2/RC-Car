@@ -123,10 +123,10 @@ int main(void) {
     // CCMP High byte is the duty and low is the period
     
     TCB0.CCMPL = 255;   // 4MHz / 255 = 15686 Hz      // LOW MUST BE SET FIRST
-    TCB0.CCMPH = 64;    // 25% duty
+    TCB0.CCMPH = 0;    // 25% duty
 
     TCB1.CCMPL = 255;    // 4MHz / 255 = 15686 Hz      
-    TCB1.CCMPH = 191;    // 75% duty
+    TCB1.CCMPH = 0;    // 75% duty
     
     TCB2.CCMPL = 50;    // 4MHz / 50 = 10,000 Hz      
     TCB2.CCMPH = 25;    // 50% duty
@@ -146,13 +146,13 @@ int main(void) {
     PORTA.DIRSET = 0b11110000;  // PA4-7 as output
     PORTD.DIRCLR = 0b00001111;  // PD1-4 as input
     
-    uint8_t servo_pos = 0;
-    
+    _delay_ms(2000);            // Delay because receiver sends a=out a signal when turned on
+            
     while (1) {
         update_button_state(&button2, &PORTD.IN, PIN2_bm);   // right check
         
         if (is_button_pressed(&button2) && !fwd_on) {        // servo right plus move forward
-           PORTA.OUTSET = PIN4_bm;
+           PORTA.OUTSET = PIN4_bm;  
            
            fwd(1);
            servo_right();  
