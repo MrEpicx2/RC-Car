@@ -11,38 +11,16 @@
 #include <util/delay.h>
 #include <stdbool.h>
 
-typedef struct {
-    bool current;
-    bool previous;
-} ButtonState;
+#include "font.h"
+#include "lcd.h"
+#include "i2c_avr128db28.h"
+#include "Reciever.h"
 
 //***********************************************GLOBALS******************************************************** 
-
-ButtonState button1 = {0};
-ButtonState button2 = {0};
-ButtonState button3 = {0};
-ButtonState button4 = {0};
 
 bool fwd_on = false;
 bool bwd_on = false;
 
-
-bool is_button_pressed(ButtonState *btn) {
-    return btn->current && !btn->previous;
-}
-
-bool is_button_released(ButtonState *btn) {
-    return !btn->current && btn->previous;
-}
-
-bool is_button_held(ButtonState *btn) {
-    return btn->current && btn->previous;
-}
-
-void update_button_state(ButtonState *btn, volatile uint8_t *port_in, uint8_t pin_mask) {
-    btn->previous = btn->current;
-    btn->current = (*port_in & pin_mask);
-}
 
 void bwd(uint8_t mode) {
     if (mode == 1) {
@@ -99,7 +77,7 @@ int main(void) {
     }
     
     
-    // Servo and ultra sonic trigger on TCA0 
+    // ******************************************Servo and ultra sonic trigger on TCA0******************************************************************************************* 
     TCA0.SINGLE.CTRLA = (TCA_SINGLE_CLKSEL_DIV256_gc) | (TCA_SINGLE_ENABLE_bm); // Divide 8MHz by 256 and enable TCA0
     TCA0.SINGLE.CTRLB = (TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_CMP0EN_bm | TCA_SINGLE_CMP1EN_bm);  // Enable single slope PWM on CMP0 and CMP1
     TCA0.SINGLE.PER = 625;                      // Frequency set to 50 Hz page 236: (31250/625) 625, being the PER value
@@ -114,7 +92,8 @@ int main(void) {
     PORTA.DIRSET = PIN0_bm;                      // PA0 and PA1 set as output
     PORTA.DIRSET = PIN1_bm;
     
-    // Motor 1 on TCB0 (PA2) Motor 2 on TCB1 (PA3) and speaker on TCB2 (PC0)
+    
+    // **********************************************Motor 1 on TCB0 (PA2) Motor 2 on TCB1 (PA3) and speaker on TCB2 (PC0)*******************************************************
     
     TCB0.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA2 H-
     TCB1.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA3 H+
@@ -123,13 +102,13 @@ int main(void) {
     // CCMP High byte is the duty and low is the period
     
     TCB0.CCMPL = 255;   // 4MHz / 255 = 15686 Hz      // LOW MUST BE SET FIRST
-    TCB0.CCMPH = 0;    // 25% duty
+    TCB0.CCMPH = 0;     // duty
 
     TCB1.CCMPL = 255;    // 4MHz / 255 = 15686 Hz      
-    TCB1.CCMPH = 0;    // 75% duty
+    TCB1.CCMPH = 0;      // duty
     
     TCB2.CCMPL = 50;    // 4MHz / 50 = 10,000 Hz      
-    TCB2.CCMPH = 25;    // 50% duty
+    TCB2.CCMPH = 25;    // duty
 
     
     TCB0.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);     // 4MHz clk and enable TCB
@@ -149,59 +128,6 @@ int main(void) {
     _delay_ms(2000);            // Delay because receiver sends a=out a signal when turned on
             
     while (1) {
-        update_button_state(&button2, &PORTD.IN, PIN2_bm);   // right check
-        
-        if (is_button_pressed(&button2) && !fwd_on) {        // servo right plus move forward
-           PORTA.OUTSET = PIN4_bm;  
-           
-           fwd(1);
-           servo_right();  
-        }
-        
-        else if (is_button_released(&button2)) {
-            fwd(0);
-            TCA0.SINGLE.CMP1 = 4800 / 100;
-            PORTA.OUTCLR = PIN4_bm;
-        }
-        
-        
-        update_button_state(&button1, &PORTD.IN, PIN1_bm);   // left check
-        
-        if (is_button_pressed(&button1) && !fwd_on) {
-            PORTA.OUTSET = PIN5_bm;
-            
-            fwd(1);
-            servo_left();
-        }
-        
-        else if (is_button_released(&button1)) {
-            fwd(0);
-            TCA0.SINGLE.CMP1 = 4800 / 100;
-            PORTA.OUTCLR = PIN5_bm;
-        }
-       
-        update_button_state(&button3, &PORTD.IN, PIN3_bm);   // fwd check
-
-        if (is_button_pressed(&button3) && !fwd_on) {
-            PORTA.OUTSET = PIN6_bm;
-            fwd(1);
-        }
-        
-        else if (is_button_released(&button3)) {
-            fwd(0);
-            PORTA.OUTCLR = PIN6_bm;
-        }   
-           
-        update_button_state(&button4, &PORTD.IN, PIN4_bm);   // bwd check
-
-        if (is_button_pressed(&button4) && !bwd_on) {
-            PORTA.OUTSET = PIN7_bm;
-            bwd(1);
-        } 
-        else if (is_button_released(&button4)) {
-            bwd(0);
-            PORTA.OUTCLR = PIN7_bm;
-        }
         
     }
 }
