@@ -21,10 +21,11 @@ bool is_signal_combo_active(SignalCombo sig) {
      Check if a port is null and if it's not return the value of the pin
      If it's null return true so the other port isn't blocked
      */
-    bool port1_check = sig.port1 ? (*sig.port1 & sig.mask1) : true;
-    bool port2_check = sig.port2 ? (*sig.port2 & sig.mask2) : true;
+    bool port1_check = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
+    bool port2_check = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
     return port1_check && port2_check;
 }
+
 
 
 int main(void) {
@@ -52,10 +53,7 @@ int main(void) {
         
         if (is_signal_combo_active(LEFT_LIGHT))     PORTA.OUT = PIN1_bm | PIN3_bm;
         
-        _delay_ms(2000);
-        PORTA.OUTCLR = 0b00001111;
-        _delay_ms(2000);
-
+        if (!(PORTA.IN & 0x60) && !(PORTD.IN & 0x30))   PORTA.OUTCLR = 0b00001111;
         
     }
 }
