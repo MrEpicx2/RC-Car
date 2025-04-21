@@ -125,7 +125,21 @@ int main(void) {
     PORTA.DIRSET = 0b11110000;  // PA4-7 as output
     PORTD.DIRCLR = 0b00001111;  // PD1-4 as input
     
-    _delay_ms(2000);            // Delay because receiver sends a=out a signal when turned on
+    //Screen SDA PC2 and SCL PC3 in i2c_avr128db28.c driver
+    
+    i2c_init(); // Initialize I2C
+
+    _delay_ms(500); // Give I2C some time before checking
+    
+    lcd_init();
+    lcd_clrscr();  // **Clear screen before writing**
+    lcd_gotoxy(0, 0);  // **Ensure cursor is at the start**
+    
+    lcd_puts("Hello World1");  // Put string from RAM
+    lcd_gotoxy(0, 2);         // Move cursor to line 3
+    lcd_puts_p(PSTR("String from flash")); 
+    _delay_ms(3000);
+    lcd_clrscr();
             
     while (1) {
         
