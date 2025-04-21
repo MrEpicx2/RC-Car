@@ -7,6 +7,7 @@
 
 
 #include <avr/io.h>
+#include "avr-main.h"
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdbool.h>
@@ -20,6 +21,10 @@
 
 bool fwd_on = false;
 bool bwd_on = false;
+
+uint16_t value[5];
+uint8_t count = 0;
+uint16_t distance[5];
 
 
 void bwd(uint8_t mode) {
@@ -125,7 +130,7 @@ int main(void) {
     PORTA.DIRSET = 0b11110000;  // PA4-7 as output
     PORTD.DIRCLR = 0b00001111;  // PD1-4 as input
     
-    //Screen SDA PC2 and SCL PC3 in i2c_avr128db28.c driver
+    //*********************************************Screen SDA PC2 and SCL PC3 in i2c_avr128db28.c driver*************************************************************************
     
     i2c_init(); // Initialize I2C
 
@@ -140,6 +145,35 @@ int main(void) {
     lcd_puts_p(PSTR("String from flash")); 
     _delay_ms(3000);
     lcd_clrscr();
+    
+    //**************************************************************************ADC set up****************************************************************************************
+    
+    // Enable global interrupts.
+    SREG = 0b10000000;
+    
+    // Set the ADC reference level to VDD.
+    VREF.ADC0REF = 0b10000101;
+    
+    // Enable the ADC interrupt.
+    ADC0.INTCTRL = 0b00000001;
+    
+    // Select PD2 (AIN2) as the ADC input.
+    ADC0.MUXPOS = 0x02;
+
+    // Select minimum clock divide.
+    ADC0.CTRLC = 0x00;
+    
+    // Select single ended mode, 12 bit resolution and free-running modes.
+    ADC0.CTRLA = 0b00000011;
+    
+    // Start conversion.
+    ADC0.COMMAND = 0x01;
+    
+    //Ultrasonic set up
+    
+    //**********************************************************************LOCALS**************************************************************************************
+    unsigned int timerThresholdOn = 5;
+    unsigned int timerThresholdOff = 50;
             
     while (1) {
         

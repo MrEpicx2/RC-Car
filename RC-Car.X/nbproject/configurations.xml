@@ -8,6 +8,7 @@
       <itemPath>i2c_avr128db28.h</itemPath>
       <itemPath>lcd.h</itemPath>
       <itemPath>Reciever.h</itemPath>
+      <itemPath>avr-main.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
