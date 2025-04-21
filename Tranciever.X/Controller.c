@@ -26,14 +26,6 @@ ButtonState buttonLight_L = {0};        // PA3      Left light
 ButtonState buttonLight_R = {0};        // PA4      Right light
 uint8_t combo = 0b0000; 
 
-bool is_button_pressed(ButtonState *btn) {
-    return btn->current && !btn->previous;
-}
-
-bool is_button_released(ButtonState *btn) {
-    return !btn->current && btn->previous;
-}
-
 bool is_button_held(ButtonState *btn) {
     return btn->current && btn->previous;
 }
@@ -99,53 +91,6 @@ int main(void) {
         _delay_ms(450);               // Brief delay for it to register release
         PORTD.OUT = combo;
         _delay_ms(200);
-
-        
-        /*
-        switch (combo) {
-            case FORWARD:
-                PORTD.OUT = FORWARD;
-                break;
-                
-            case BACKWARD:
-                PORTD.OUT = BACKWARD;
-                break;
-                
-            case LEFT:
-                PORTD.OUT = LEFT;
-                break;
-                
-            case RIGHT:
-                PORTD.OUT = RIGHT;
-                break;
-                
-            case FORWARD_LEFT:
-                PORTD.OUT = FORWARD_LEFT;
-                break;
-                
-            case FORWARD_RIGHT:
-                PORTD.OUT = FORWARD_RIGHT;
-                break;
-                
-            case BACKWARD_LEFT:
-                PORTD.OUT = BACKWARD_LEFT;
-                break;
-                
-            case BACKWARD_RIGHT:
-                PORTD.OUT = BACKWARD_RIGHT;
-                break;
-                
-            case RIGHT_LIGHT:
-                PORTD.OUT = RIGHT_LIGHT;
-                break;
-                
-            case LEFT_LIGHT:
-                PORTD.OUT = LEFT_LIGHT;
-                break;
-            
-            case IDLE:
-                PORTD.OUT = IDLE;
-                break;*/
             
     }         
 }

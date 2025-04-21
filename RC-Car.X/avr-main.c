@@ -8,8 +8,89 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#include <util/delay.h>
+#include <util/delay.h>
 #include <stdbool.h>
+
+typedef struct {
+    bool current;
+    bool previous;
+} ButtonState;
+
+//***********************************************GLOBALS******************************************************** 
+
+ButtonState button1 = {0};
+ButtonState button2 = {0};
+ButtonState button3 = {0};
+ButtonState button4 = {0};
+
+bool fwd_on = false;
+bool bwd_on = false;
+
+
+bool is_button_pressed(ButtonState *btn) {
+    return btn->current && !btn->previous;
+}
+
+bool is_button_released(ButtonState *btn) {
+    return !btn->current && btn->previous;
+}
+
+bool is_button_held(ButtonState *btn) {
+    return btn->current && btn->previous;
+}
+
+void update_button_state(ButtonState *btn, volatile uint8_t *port_in, uint8_t pin_mask) {
+    btn->previous = btn->current;
+    btn->current = (*port_in & pin_mask);
+}
+
+void bwd(uint8_t mode) {
+    if (mode == 1) {
+        TCB0.CCMPH = 102;
+
+        for (uint8_t duty = 102; duty <= 254; duty++) {
+            TCB0.CCMPH = duty;
+            _delay_ms(10);
+        }
+        bwd_on = true;
+    }
+    
+    else if (mode == 0){
+        TCB0.CCMPH = 0;
+        bwd_on = false;
+    }
+}
+
+void fwd(uint8_t mode) {
+    if (mode == 1) {
+        TCB1.CCMPH = 102;
+
+        for (uint8_t duty = 102; duty <= 254; duty++) {
+            TCB1.CCMPH = duty;
+            _delay_ms(10);
+        }
+        fwd_on = true;
+    }
+    
+    else if (mode == 0){
+        TCB1.CCMPH = 0;
+        fwd_on = false;
+    }
+}
+
+void servo_right(void){
+    for (uint16_t servo_pos = 4800; servo_pos >= 1719; servo_pos--) {
+        TCA0.SINGLE.CMP1 = servo_pos / 100;
+        _delay_ms(1);
+    }
+}
+
+void servo_left(void) {
+    for (uint16_t servo_pos = 4800; servo_pos <= 8124; servo_pos++) {
+        TCA0.SINGLE.CMP1 = servo_pos / 100;
+        _delay_ms(1);
+    }
+}
 
 int main(void) {    
     CCP = 0xD8;                 // unlock protected I/O registers - page 41
@@ -25,25 +106,27 @@ int main(void) {
     
     // CMP0 will be for trigger and CMP1 will be for the servo
     
-    TCA0.SINGLE.CMP0 = 1;                        // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
-    TCA0.SINGLE.CMP1 = 47;                      // 7.5% duty cycle for PA1 (Servo middle)
+    TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
+    TCA0.SINGLE.CMP1 = 4800 / 100;                 // divide to avoid using decimals the compiler won't keep them
+                                                   // min = 2.75% (17.18), +45° from min = 5.13% (32.03), 0° = 7.5% (46) but 48 is more accurate, +45° from 0 = 10.25% (64.06)
+                                                   // max = 13% (81.25) I will put these in a header file later to make it easier to use
     
     PORTA.DIRSET = PIN0_bm;                      // PA0 and PA1 set as output
     PORTA.DIRSET = PIN1_bm;
     
     // Motor 1 on TCB0 (PA2) Motor 2 on TCB1 (PA3) and speaker on TCB2 (PC0)
     
-    TCB0.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA2
-    TCB1.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA3
+    TCB0.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA2 H-
+    TCB1.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA3 H+
     TCB2.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PC0
     
     // CCMP High byte is the duty and low is the period
     
     TCB0.CCMPL = 255;   // 4MHz / 255 = 15686 Hz      // LOW MUST BE SET FIRST
-    TCB0.CCMPH = 64;    // 25% duty
+    TCB0.CCMPH = 0;    // 25% duty
 
     TCB1.CCMPL = 255;    // 4MHz / 255 = 15686 Hz      
-    TCB1.CCMPH = 191;    // 75% duty
+    TCB1.CCMPH = 0;    // 75% duty
     
     TCB2.CCMPL = 50;    // 4MHz / 50 = 10,000 Hz      
     TCB2.CCMPH = 25;    // 50% duty
@@ -57,8 +140,68 @@ int main(void) {
     PORTA.DIRSET = PIN2_bm;
     PORTA.DIRSET = PIN3_bm;
     PORTC.DIRSET = PIN0_bm;
-    while (1) {
     
+    // RF set up
+    
+    PORTA.DIRSET = 0b11110000;  // PA4-7 as output
+    PORTD.DIRCLR = 0b00001111;  // PD1-4 as input
+    
+    _delay_ms(2000);            // Delay because receiver sends a=out a signal when turned on
+            
+    while (1) {
+        update_button_state(&button2, &PORTD.IN, PIN2_bm);   // right check
+        
+        if (is_button_pressed(&button2) && !fwd_on) {        // servo right plus move forward
+           PORTA.OUTSET = PIN4_bm;  
+           
+           fwd(1);
+           servo_right();  
+        }
+        
+        else if (is_button_released(&button2)) {
+            fwd(0);
+            TCA0.SINGLE.CMP1 = 4800 / 100;
+            PORTA.OUTCLR = PIN4_bm;
+        }
+        
+        
+        update_button_state(&button1, &PORTD.IN, PIN1_bm);   // left check
+        
+        if (is_button_pressed(&button1) && !fwd_on) {
+            PORTA.OUTSET = PIN5_bm;
+            
+            fwd(1);
+            servo_left();
+        }
+        
+        else if (is_button_released(&button1)) {
+            fwd(0);
+            TCA0.SINGLE.CMP1 = 4800 / 100;
+            PORTA.OUTCLR = PIN5_bm;
+        }
+       
+        update_button_state(&button3, &PORTD.IN, PIN3_bm);   // fwd check
+
+        if (is_button_pressed(&button3) && !fwd_on) {
+            PORTA.OUTSET = PIN6_bm;
+            fwd(1);
+        }
+        
+        else if (is_button_released(&button3)) {
+            fwd(0);
+            PORTA.OUTCLR = PIN6_bm;
+        }   
+           
+        update_button_state(&button4, &PORTD.IN, PIN4_bm);   // bwd check
+
+        if (is_button_pressed(&button4) && !bwd_on) {
+            PORTA.OUTSET = PIN7_bm;
+            bwd(1);
+        } 
+        else if (is_button_released(&button4)) {
+            bwd(0);
+            PORTA.OUTCLR = PIN7_bm;
+        }
+        
     }
 }
-
