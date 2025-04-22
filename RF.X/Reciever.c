@@ -72,53 +72,57 @@ int main(void) {
         if (is_signal_combo_active(FORWARD)) {
             output = fwd;
             output_arg = (void*)1;
+            //fwd(output_arg);
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(BACKWARD)) {
+        else if (is_signal_combo_active(BACKWARD)) {
             output = bwd;
             output_arg = (void*)1;
+            //bwd(output_arg);
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(LEFT)) {
+        else if (is_signal_combo_active(LEFT)) {
             output = servo_left;
             output_arg = NULL;
+            //servo_left(output_arg);
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(RIGHT)) {
+        else if (is_signal_combo_active(RIGHT)) {
             output = servo_right;
             output_arg = NULL;
+            //servo_right(output_arg);
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(FORWARD_LEFT)) {
+        else if (is_signal_combo_active(FORWARD_LEFT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(FORWARD_RIGHT)) {
+        else if (is_signal_combo_active(FORWARD_RIGHT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(BACKWARD_LEFT)) {
+        else if (is_signal_combo_active(BACKWARD_LEFT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(BACKWARD_RIGHT)) {
+        else if (is_signal_combo_active(BACKWARD_RIGHT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(RIGHT_LIGHT)) {
+        else if (is_signal_combo_active(RIGHT_LIGHT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(LEFT_LIGHT)) {
+        else if (is_signal_combo_active(LEFT_LIGHT)) {
             output = NULL;
             dead_time = 0;
         }
@@ -130,11 +134,14 @@ int main(void) {
             if (dead_time > 1000) {
                 output_arg = NULL;
                 output = fwd;
+                //fwd(output_arg);
                 output(output_arg);
                 output = bwd;
+                //bwd(output_arg);
                 output(output_arg);
                 output = servo_zero;
                 output(output_arg);
+                //servo_zero(output_arg);
                 PORTA.OUTCLR = PIN0_bm | PIN1_bm;
                 dead_time = 1000;
             }          
