@@ -195,13 +195,13 @@ int main(void) {
     while (1) {
         if (is_signal_combo_active(FORWARD)) {
             output = fwd;
-            output_arg = 1;
+            output_arg = (void*)1;
             dead_time = 0;
         }
         
         if (is_signal_combo_active(BACKWARD)) {
             output = bwd;
-            output_arg = 1;
+            output_arg = (void*)1;
             dead_time = 0;
         }
         
@@ -252,7 +252,7 @@ int main(void) {
         if (!(PORTA.IN & 0x60) && !(PORTD.IN & 0x30)) {
             dead_time++;
             if (dead_time > 1000) {
-                output_arg = 0;
+                output_arg = NULL;
                 output = fwd;
                 output(output_arg);
                 output = bwd;

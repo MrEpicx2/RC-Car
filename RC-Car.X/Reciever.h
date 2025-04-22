@@ -7,7 +7,7 @@
 
 #define NULL ((void*)0)
 
-typedef void (*ActionFunction)(void);
+typedef void (*ActionFunction)(void*);
 
 typedef struct {
     volatile uint8_t* port1;
