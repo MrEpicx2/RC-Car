@@ -5,10 +5,6 @@
  * Created on April 20, 2025, 4:14 PM
  */
 
-#define NULL ((void*)0)
-
-typedef void (*ActionFunction)(void*);
-
 typedef struct {
     volatile uint8_t* port1;
     uint8_t mask1;
