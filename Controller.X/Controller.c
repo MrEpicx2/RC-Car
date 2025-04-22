@@ -25,6 +25,7 @@ ButtonState buttonRight = {0};          // PA6      Right
 ButtonState buttonLight_L = {0};        // PA3      Left light
 ButtonState buttonLight_R = {0};        // PA4      Right light
 uint8_t combo = 0b0000; 
+uint8_t prv_combo = 0b0000;
 
 bool is_button_held(ButtonState *btn) {
     return btn->current && btn->previous;
@@ -86,9 +87,12 @@ int main(void) {
     PORTD.DIRSET = 0xFF;
     
     while (1) {
+        prv_combo = combo_logic();
         combo = combo_logic();
-        PORTD.OUT = 0xFF;           // Set all lines HIGH to reset the encoder
-        _delay_ms(450);               // Brief delay for it to register release
+        if (prv_combo != combo) {
+            PORTD.OUT = 0xFF;           // Set all lines HIGH to reset the encoder
+            _delay_ms(450);               // Brief delay for it to register release
+        }
         PORTD.OUT = combo;
         _delay_ms(200);
             
