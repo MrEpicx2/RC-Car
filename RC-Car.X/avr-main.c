@@ -28,34 +28,36 @@ uint16_t distance[5];
 
 
 void bwd(void* mode) {
-    if (mode == 1) {
-        TCB0.CCMPH = 102;
-
-        for (uint8_t duty = 102; duty <= 254; duty++) {
-            TCB0.CCMPH = duty;
-            _delay_ms(10);
+    if ((uint8_t)(uintptr_t) mode == 1) {
+        if (bwd_on == false) {
+            for (uint8_t duty = 102; duty <= 254; duty++) {
+                TCB0.CCMPH = duty;
+                _delay_ms(10);
+            }
+            bwd_on = true;
         }
-        bwd_on = true;
+        else if (bwd_on == true)   TCB0.CCMPH = 255; 
     }
     
-    else if (mode == 0){
+    else if ((uint8_t)(uintptr_t) mode == 0){
         TCB0.CCMPH = 0;
         bwd_on = false;
     }
 }
 
 void fwd(void* mode) {
-    if (mode == 1) {
-        TCB1.CCMPH = 102;
-
-        for (uint8_t duty = 102; duty <= 254; duty++) {
-            TCB1.CCMPH = duty;
-            _delay_ms(10);
+    if ((uint8_t)(uintptr_t) mode == 1) {
+        if (fwd_on == false) {
+            for (uint8_t duty = 102; duty <= 254; duty++) {
+                TCB1.CCMPH = duty;
+                _delay_ms(10);
+            }
+            fwd_on = true;
         }
-        fwd_on = true;
+        else if (fwd_on == true)   TCB1.CCMPH = 255; 
     }
     
-    else if (mode == 0){
+    else if ((uint8_t)(uintptr_t) mode == 0){
         TCB1.CCMPH = 0;
         fwd_on = false;
     }
@@ -79,11 +81,30 @@ void servo_left(void* unused) {
     }*/
 }
 
+void fwd_left(void* mode) {
+    servo_left(NULL);
+    fwd(mode);
+    
+}
+
+void fwd_right(void* mode) {
+    servo_right(NULL);
+    fwd(mode);
+}
+
+void bwd_left(void* mode) {
+    servo_left(NULL);
+    bwd(mode);
+}
+
+void bwd_right(void* mode) {
+    servo_right(NULL);
+    bwd(mode);
+}
+
 bool is_signal_combo_active(SignalCombo sig) {
     bool port1_check_1 = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
     bool port2_check_1 = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
-
-    _delay_ms(5);  // debounce delay
 
     bool port1_check_2 = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
     bool port2_check_2 = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
@@ -188,93 +209,100 @@ int main(void) {
     
     //Receiver set up
     
-    PORTA.DIRCLR = 0b01100000;      // PA5 and PA6 as incoming receiver signal D1 and D0 respectivley
-    PORTD.DIRCLR = 0b00110000;      // PD4 and PD5 as incoming receiver signal D3 and D2 respectivley
+    PORTA.PIN5CTRL |= PORT_PULLUPEN_bm;
+    PORTA.PIN6CTRL |= PORT_PULLUPEN_bm;
+    
+    PORTD.PIN4CTRL |= PORT_PULLUPEN_bm;
+    PORTD.PIN5CTRL |= PORT_PULLUPEN_bm;
+    
+    PORTA.DIRCLR = PIN5_bm | PIN6_bm;      // PA5 and PA6 as incoming receiver signal D1 and D0 respectivley
+    PORTD.DIRCLR = PIN3_bm | PIN4_bm;      // PD4 and PD5 as incoming receiver signal D3 and D2 respectivley
     
     //**********************************************************************LOCALS**************************************************************************************
     
     PORTA.DIRSET = PIN7_bm;
     
-    uint16_t dead_time = 1000;
     ActionFunction output = NULL;
     void* output_arg = NULL;
     
     while (1) {
         output = NULL;
-        if (is_signal_combo_active(FORWARD)) {
-            output = fwd;
+        output_arg = NULL;
+        
+        if (is_signal_combo_active(BACKWARD_LEFT)) {
+            PORTA.OUTSET = PIN7_bm;
+            output = bwd_left;
             output_arg = (void*)1;
-            dead_time = 0;
-        }
-        
-        else if (is_signal_combo_active(BACKWARD)) {
-            output = bwd;
-            output_arg = (void*)1;
-            dead_time = 0;
-        }
-        
-        else if (is_signal_combo_active(LEFT)) {
-            output = servo_left;
-            output_arg = NULL;
-            dead_time = 0;
-        }
-        
-        else if (is_signal_combo_active(RIGHT)) {
-            PORTA.OUT = PIN7_bm;
-            output = servo_right;
-            output_arg = NULL;
-            dead_time = 0;
-        }
-        
-        else if (is_signal_combo_active(FORWARD_LEFT)) {
-            output = NULL;
-            dead_time = 0;
         }
         
         else if (is_signal_combo_active(FORWARD_RIGHT)) {
-            output = NULL;
-            dead_time = 0;
+            PORTA.OUTSET = PIN7_bm;
+            output = fwd_right;
+            output_arg = (void*)1;
         }
         
-        else if (is_signal_combo_active(BACKWARD_LEFT)) {
-            output = NULL;
-            dead_time = 0;
+        else if (is_signal_combo_active(FORWARD_LEFT)) {
+            PORTA.OUTSET = PIN7_bm;
+            output = fwd_left;
+            output_arg = (void*)1;
         }
         
-        else if (is_signal_combo_active(BACKWARD_RIGHT)) {
-            output = NULL;
-            dead_time = 0;
+        else if (is_signal_combo_active(LEFT)) {
+            PORTA.OUTSET = PIN7_bm;
+            output = servo_left;
+            output_arg = NULL;
         }
         
         else if (is_signal_combo_active(RIGHT_LIGHT)) {
+            PORTA.OUTSET = PIN7_bm;
             output = NULL;
-            dead_time = 0;
         }
         
         else if (is_signal_combo_active(LEFT_LIGHT)) {
+            PORTA.OUTSET = PIN7_bm;
             output = NULL;
-            dead_time = 0;
+            output_arg = NULL;
+        }
+        
+        else if (is_signal_combo_active(FORWARD)) {
+            PORTA.OUTSET = PIN7_bm;
+            output = fwd;
+            output_arg = (void*)1;
+        }
+        
+        else if (is_signal_combo_active(BACKWARD)) {
+            PORTA.OUTSET = PIN7_bm;
+            output = bwd;
+            output_arg = (void*)1;
         }
         
         
-        output(output_arg);     // Call whatever function the signal is
+        else if (is_signal_combo_active(RIGHT)) {
+            PORTA.OUTSET = PIN7_bm;
+            output = servo_right;
+            output_arg = NULL;
+        }
+        
+
+        else if (is_signal_combo_active(BACKWARD_RIGHT)) {
+            PORTA.OUTSET = PIN7_bm;
+            output = bwd_right;
+            output_arg = (void*)1;
+        }
+        
+        if (output != NULL) output(output_arg);     // Call whatever function the signal is
         
         
-        if (output == NULL) {
-            dead_time++;
+        else if (output == NULL) {
             PORTA.OUTCLR = PIN7_bm;
-            if (dead_time > 1000) {
-                output_arg = NULL;
-                output = fwd;
-                output(output_arg);
-                output = bwd;
-                output(output_arg);
-                output = NULL;
-                //PORTA.OUTCLR = PIN7_bm;
-                dead_time = 1000;
-                
-            }          
+            output_arg = NULL;
+            output = fwd;
+            output(output_arg);
+            output = bwd;
+            output(output_arg);
+            TCA0.SINGLE.CMP1 = 4800 / 100;          // reset servo
+            output = NULL;      
         }
-        
+        _delay_ms(10);  // debounce delay
     }
 }
