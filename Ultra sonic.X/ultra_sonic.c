@@ -19,19 +19,19 @@ int main(void) {
     while (CLKCTRL.MCLKSTATUS & 0b00000001) {
     }
     
-    TCA0.SINGLE.CTRLA = 0b00001001;         // Counter frequency set to 0.5MHz
+    // ******************************************Servo and ultra sonic trigger on TCA0******************************************************************************************* 
+    TCA0.SINGLE.CTRLA = (TCA_SINGLE_CLKSEL_DIV256_gc) | (TCA_SINGLE_ENABLE_bm); // Divide 8MHz by 256 and enable TCA0
+    TCA0.SINGLE.CTRLB = (TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_CMP0EN_bm | TCA_SINGLE_CMP1EN_bm);  // Enable single slope PWM on CMP0 and CMP1
+    TCA0.SINGLE.PER = 625;                      // Frequency set to 50 Hz page 236: (31250/625) 625, being the PER value
     
-    // We will manually check the timer and reset the timer
-    // so set the period to its max value to avoid an automatic
-    // reset.
-    TCA0.SINGLE.PER = 0xffff;
+    // CMP0 will be for trigger and CMP1 will be for the servo
+    
+    TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
 
     unsigned int timerThresholdOn = 5;
     unsigned int timerThresholdOff = 50;
 
     PORTA.DIRSET = 0b00000001;
-    
-    PORTA.DIRSET = 0x01;
     
     EVSYS.CHANNEL0 = 0x41;                      // PORTA pin 1 is set to channel 0, will be the incoming echo signal
     EVSYS.USERTCB2CAPT = 0x01;                  // Select channel 0 for this user (1-1=0)

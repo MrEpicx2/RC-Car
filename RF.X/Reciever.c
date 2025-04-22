@@ -11,10 +11,6 @@
 #include <stdbool.h>
 #include "Reciever.h"
 
-typedef struct {
-    bool current;
-    bool previous;
-} ButtonState;
 
 bool is_signal_combo_active(SignalCombo sig) {
     /*

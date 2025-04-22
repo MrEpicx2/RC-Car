@@ -27,7 +27,7 @@ uint8_t count = 0;
 uint16_t distance[5];
 
 
-void bwd(uint8_t mode) {
+void bwd(void* mode) {
     if (mode == 1) {
         TCB0.CCMPH = 102;
 
@@ -44,7 +44,7 @@ void bwd(uint8_t mode) {
     }
 }
 
-void fwd(uint8_t mode) {
+void fwd(void* mode) {
     if (mode == 1) {
         TCB1.CCMPH = 102;
 
@@ -61,18 +61,28 @@ void fwd(uint8_t mode) {
     }
 }
 
-void servo_right(void){
+void servo_right(void* unused){
     for (uint16_t servo_pos = 4800; servo_pos >= 1719; servo_pos--) {
         TCA0.SINGLE.CMP1 = servo_pos / 100;
         _delay_ms(1);
     }
 }
 
-void servo_left(void) {
+void servo_left(void* unused) {
     for (uint16_t servo_pos = 4800; servo_pos <= 8124; servo_pos++) {
         TCA0.SINGLE.CMP1 = servo_pos / 100;
         _delay_ms(1);
     }
+}
+
+bool is_signal_combo_active(SignalCombo sig) {
+    /*
+     Check if a port is null and if it's not return the value of the pin
+     If it's null return true so the other port isn't blocked
+     */
+    bool port1_check = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
+    bool port2_check = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
+    return port1_check && port2_check;
 }
 
 int main(void) {    
@@ -171,11 +181,86 @@ int main(void) {
     
     //Ultrasonic set up
     
+    //Receiver set up
+    
+    PORTA.DIRCLR = 0b01100000;      // PA5 and PA6 as incoming receiver signal D1 and D0 respectivley
+    PORTD.DIRCLR = 0b00110000;      // PD4 and PD5 as incoming receiver signal D3 and D2 respectivley
+    
     //**********************************************************************LOCALS**************************************************************************************
-    unsigned int timerThresholdOn = 5;
-    unsigned int timerThresholdOff = 50;
-            
+    
+    uint16_t dead_time = 1000;
+    ActionFunction output = NULL;
+    void* output_arg = NULL;
+    
     while (1) {
+        if (is_signal_combo_active(FORWARD)) {
+            output = fwd;
+            output_arg = 1;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(BACKWARD)) {
+            output = bwd;
+            output_arg = 1;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(LEFT)) {
+            output = servo_left;
+            output_arg = NULL;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(RIGHT)) {
+            output = servo_right;
+            output_arg = NULL;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(FORWARD_LEFT)) {
+            output = NULL;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(FORWARD_RIGHT)) {
+            output = NULL;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(BACKWARD_LEFT)) {
+            output = NULL;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(BACKWARD_RIGHT)) {
+            output = NULL;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(RIGHT_LIGHT)) {
+            output = NULL;
+            dead_time = 0;
+        }
+        
+        if (is_signal_combo_active(LEFT_LIGHT)) {
+            output = NULL;
+            dead_time = 0;
+        }
+        
+        output(output_arg);     // Call whatever function the signal is
+        
+        if (!(PORTA.IN & 0x60) && !(PORTD.IN & 0x30)) {
+            dead_time++;
+            if (dead_time > 1000) {
+                output_arg = 0;
+                output = fwd;
+                output(output_arg);
+                output = bwd;
+                output(output_arg);
+                dead_time = 1000;
+                
+            }          
+        }
         
     }
 }
