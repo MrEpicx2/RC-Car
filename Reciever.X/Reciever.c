@@ -81,9 +81,11 @@ int main(void) {
     PORTD.DIRCLR = 0b00110000;
     
     uint16_t dead_time = 1000;
-    //uint8_t output = 0;
+    uint8_t output = 0;
     
     while (1) {
+        /*
+    }
         bool found_active = false;
         
         for (size_t i = 0; i < NUM_ACTIONS; ++i) {
@@ -106,10 +108,10 @@ int main(void) {
                 dead_time = 1000;
             }
         }
+        */
         
         
         
-        /*
         if (is_signal_combo_active(FORWARD)) {
             output = PIN0_bm;
             dead_time = 0;
@@ -169,6 +171,6 @@ int main(void) {
                 dead_time = 1000;
                 output = 0;
             }          
-        }*/   
+        }   
     }
 }

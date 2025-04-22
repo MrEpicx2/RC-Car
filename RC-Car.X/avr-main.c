@@ -62,28 +62,35 @@ void fwd(void* mode) {
 }
 
 void servo_right(void* unused){
+    TCA0.SINGLE.CMP1 = 1719 / 100;
+    /*
     for (uint16_t servo_pos = 4800; servo_pos >= 1719; servo_pos--) {
         TCA0.SINGLE.CMP1 = servo_pos / 100;
         _delay_ms(1);
-    }
+    }*/
 }
 
 void servo_left(void* unused) {
+    TCA0.SINGLE.CMP1 = 8124 / 100;
+    /*
     for (uint16_t servo_pos = 4800; servo_pos <= 8124; servo_pos++) {
         TCA0.SINGLE.CMP1 = servo_pos / 100;
         _delay_ms(1);
-    }
+    }*/
 }
 
 bool is_signal_combo_active(SignalCombo sig) {
-    /*
-     Check if a port is null and if it's not return the value of the pin
-     If it's null return true so the other port isn't blocked
-     */
-    bool port1_check = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
-    bool port2_check = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
-    return port1_check && port2_check;
+    bool port1_check_1 = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
+    bool port2_check_1 = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
+
+    _delay_ms(5);  // debounce delay
+
+    bool port1_check_2 = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
+    bool port2_check_2 = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
+
+    return (port1_check_1 && port2_check_1 && port1_check_2 && port2_check_2);
 }
+
 
 int main(void) {    
     CCP = 0xD8;                 // unlock protected I/O registers - page 41
@@ -135,13 +142,10 @@ int main(void) {
     PORTA.DIRSET = PIN3_bm;
     PORTC.DIRSET = PIN0_bm;
     
-    // RF set up
-    
-    PORTA.DIRSET = 0b11110000;  // PA4-7 as output
-    PORTD.DIRCLR = 0b00001111;  // PD1-4 as input
     
     //*********************************************Screen SDA PC2 and SCL PC3 in i2c_avr128db28.c driver*************************************************************************
     
+    /*
     i2c_init(); // Initialize I2C
 
     _delay_ms(500); // Give I2C some time before checking
@@ -155,6 +159,7 @@ int main(void) {
     lcd_puts_p(PSTR("String from flash")); 
     _delay_ms(3000);
     lcd_clrscr();
+     */
     
     //**************************************************************************ADC set up****************************************************************************************
     
@@ -188,75 +193,84 @@ int main(void) {
     
     //**********************************************************************LOCALS**************************************************************************************
     
+    PORTA.DIRSET = PIN7_bm;
+    
     uint16_t dead_time = 1000;
     ActionFunction output = NULL;
     void* output_arg = NULL;
     
     while (1) {
+        output = NULL;
         if (is_signal_combo_active(FORWARD)) {
             output = fwd;
             output_arg = (void*)1;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(BACKWARD)) {
+        else if (is_signal_combo_active(BACKWARD)) {
             output = bwd;
             output_arg = (void*)1;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(LEFT)) {
+        else if (is_signal_combo_active(LEFT)) {
             output = servo_left;
             output_arg = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(RIGHT)) {
+        else if (is_signal_combo_active(RIGHT)) {
+            PORTA.OUT = PIN7_bm;
             output = servo_right;
             output_arg = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(FORWARD_LEFT)) {
+        else if (is_signal_combo_active(FORWARD_LEFT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(FORWARD_RIGHT)) {
+        else if (is_signal_combo_active(FORWARD_RIGHT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(BACKWARD_LEFT)) {
+        else if (is_signal_combo_active(BACKWARD_LEFT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(BACKWARD_RIGHT)) {
+        else if (is_signal_combo_active(BACKWARD_RIGHT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(RIGHT_LIGHT)) {
+        else if (is_signal_combo_active(RIGHT_LIGHT)) {
             output = NULL;
             dead_time = 0;
         }
         
-        if (is_signal_combo_active(LEFT_LIGHT)) {
+        else if (is_signal_combo_active(LEFT_LIGHT)) {
             output = NULL;
             dead_time = 0;
         }
+        
         
         output(output_arg);     // Call whatever function the signal is
         
-        if (!(PORTA.IN & 0x60) && !(PORTD.IN & 0x30)) {
+        
+        if (output == NULL) {
             dead_time++;
+            PORTA.OUTCLR = PIN7_bm;
             if (dead_time > 1000) {
                 output_arg = NULL;
                 output = fwd;
                 output(output_arg);
                 output = bwd;
                 output(output_arg);
+                output = NULL;
+                //PORTA.OUTCLR = PIN7_bm;
                 dead_time = 1000;
                 
             }          
