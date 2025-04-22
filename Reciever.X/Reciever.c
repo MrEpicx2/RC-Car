@@ -54,6 +54,22 @@ void servo_zero(void* unused) {
     PORTA.OUTCLR = PIN2_bm | PIN3_bm;
 }
 
+SignalAction signal_actions[] = {
+    { FORWARD,        fwd,  (void*)1 },
+    { BACKWARD,       bwd,  (void*)1 },
+    { LEFT,           servo_left,  NULL },
+    { RIGHT,          servo_right, NULL },
+    { FORWARD_LEFT,   NULL, NULL },  // Placeholder for future
+    { FORWARD_RIGHT,  NULL, NULL },
+    { BACKWARD_LEFT,  NULL, NULL },
+    { BACKWARD_RIGHT, NULL, NULL },
+    { RIGHT_LIGHT,    NULL, NULL },
+    { LEFT_LIGHT,     NULL, NULL }
+};
+
+const size_t NUM_ACTIONS = sizeof(signal_actions) / sizeof(signal_actions[0]);
+
+
 int main(void) {
     CCP = 0xD8;                 // unlock protected I/O registers - page 41
     CLKCTRL.OSCHFCTRLA = 0x14;  // Clock set to 8 MHz
@@ -65,86 +81,94 @@ int main(void) {
     PORTD.DIRCLR = 0b00110000;
     
     uint16_t dead_time = 1000;
-    ActionFunction output = NULL;
-    void* output_arg = NULL;
-            
-    while (1) {   
+    //uint8_t output = 0;
+    
+    while (1) {
+        bool found_active = false;
+        
+        for (size_t i = 0; i < NUM_ACTIONS; ++i) {
+            if (is_signal_combo_active(signal_actions[i].combo)) {
+                if (signal_actions[i].func) {
+                    signal_actions[i].func(signal_actions[i].arg);
+                }
+                dead_time = 0;
+                found_active = true;
+                break; // Exit loop on first match
+            }
+        }
+
+        if (!found_active) {
+            dead_time++;
+            if (dead_time > 1000) {
+                fwd((void*)0);
+                bwd((void*)0);
+                servo_zero(NULL);
+                dead_time = 1000;
+            }
+        }
+        
+        
+        
+        /*
         if (is_signal_combo_active(FORWARD)) {
-            output = fwd;
-            output_arg = (void*)1;
-            //fwd(output_arg);
+            output = PIN0_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(BACKWARD)) {
-            output = bwd;
-            output_arg = (void*)1;
-            //bwd(output_arg);
+        if (is_signal_combo_active(BACKWARD)) {
+            output = PIN1_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(LEFT)) {
-            output = servo_left;
-            output_arg = NULL;
-            //servo_left(output_arg);
+        if (is_signal_combo_active(LEFT)) {
+            output = PIN0_bm | PIN1_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(RIGHT)) {
-            output = servo_right;
-            output_arg = NULL;
-            //servo_right(output_arg);
+        if (is_signal_combo_active(RIGHT)) {
+            output = PIN2_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(FORWARD_LEFT)) {
-            output = NULL;
+        if (is_signal_combo_active(FORWARD_LEFT)) {
+            output = PIN0_bm | PIN2_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(FORWARD_RIGHT)) {
-            output = NULL;
+        if (is_signal_combo_active(FORWARD_RIGHT)) {
+            output = PIN1_bm | PIN2_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(BACKWARD_LEFT)) {
-            output = NULL;
+        if (is_signal_combo_active(BACKWARD_LEFT)) {
+            output = PIN0_bm | PIN1_bm | PIN2_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(BACKWARD_RIGHT)) {
-            output = NULL;
+        if (is_signal_combo_active(BACKWARD_RIGHT)) {
+            output = PIN3_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(RIGHT_LIGHT)) {
-            output = NULL;
+        if (is_signal_combo_active(RIGHT_LIGHT)) {
+            output = PIN0_bm | PIN3_bm;
             dead_time = 0;
         }
         
-        else if (is_signal_combo_active(LEFT_LIGHT)) {
-            output = NULL;
+        if (is_signal_combo_active(LEFT_LIGHT)) {
+            output = PIN1_bm | PIN3_bm;
             dead_time = 0;
         }
+        PORTA.OUTSET = output;
         
-        output(output_arg);     // Call whatever function the signal is
         
         if (!(PORTA.IN & 0x60) && !(PORTD.IN & 0x30)) {
             dead_time++;
             if (dead_time > 1000) {
-                output_arg = NULL;
-                output = fwd;
-                //fwd(output_arg);
-                output(output_arg);
-                output = bwd;
-                //bwd(output_arg);
-                output(output_arg);
-                output = servo_zero;
-                output(output_arg);
-                //servo_zero(output_arg);
-                PORTA.OUTCLR = PIN0_bm | PIN1_bm;
+                PORTA.OUTCLR = 0b00001111;
                 dead_time = 1000;
+                output = 0;
             }          
-        }   
+        }*/   
     }
 }

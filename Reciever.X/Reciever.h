@@ -5,6 +5,8 @@
  * Created on April 20, 2025, 4:14 PM
  */
 
+typedef void (*ActionFunction)(void*);
+
 typedef struct {
     volatile uint8_t* port1;
     uint8_t mask1;
@@ -12,9 +14,15 @@ typedef struct {
     uint8_t mask2;
 } SignalCombo;
 
+typedef struct {
+    SignalCombo combo;
+    ActionFunction func;
+    void* arg;
+} SignalAction;
+
+
 #define NULL ((void*)0)
 
-typedef void (*ActionFunction)(void*);
 
 #define FORWARD          (SignalCombo) {.port1 = &PORTA.IN, .mask1 = 0x40}  // PA6
 #define BACKWARD         (SignalCombo) {.port1 = &PORTA.IN, .mask1 = 0x20}  // PA5
