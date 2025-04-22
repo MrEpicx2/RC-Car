@@ -87,11 +87,11 @@ int main(void) {
     PORTD.DIRSET = 0xFF;
     
     while (1) {
-        prv_combo = combo_logic();
+        prv_combo = combo;
         combo = combo_logic();
         if (prv_combo != combo) {
             PORTD.OUT = 0xFF;           // Set all lines HIGH to reset the encoder
-            _delay_ms(450);               // Brief delay for it to register release
+            _delay_ms(650);               // Brief delay for it to register release
         }
         PORTD.OUT = combo;
         _delay_ms(200);
