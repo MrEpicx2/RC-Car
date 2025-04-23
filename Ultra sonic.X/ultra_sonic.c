@@ -29,6 +29,9 @@ int main(void) {
     TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
 
     PORTA.DIRSET = PIN0_bm;
+    PORTD.DIRSET = PIN7_bm;
+    PORTC.DIRCLR = PIN1_bm;
+    PORTC.PIN1CTRL = PORT_ISC_BOTHEDGES_gc;
     
     /*
     EVSYS.CHANNEL0 = 0x41;                      // PORTA pin 1 is set to channel 0, will be the incoming echo signal
@@ -41,14 +44,14 @@ int main(void) {
     TCB2.CTRLA = 0x01;                          // Uses clk with no division
     */
     
-    EVSYS.CHANNEL2 = EVSYS_CHANNEL2_PORTC_PIN1_gc;  // Route PC1 to Async Channel 0
-    EVSYS.USERTCD0INPUTA = 0x03;
+    EVSYS.CHANNEL2 = EVSYS_CHANNEL2_PORTC_PIN1_gc;  // Route PC1 to Channel 0
+    EVSYS.USERTCD0INPUTA = EVSYS_USER_CHANNEL2_gc;
     
-    TCD0.CTRLA = TCD_ENABLE_bm;
     TCD0.CTRLB = TCD_WGMODE_ONERAMP_gc;     // no effect 
-    TCD0.EVCTRLA = TCD_TRIGEI_bm; // Capture on Event A and enable it
-
-    TCD0.INTCTRL = TCD_TRIGA_bm;  // Enable interrupt on TRIGA (capture A)
+    TCD0.EVCTRLA = TCD_TRIGEI_bm | TCD_ACTION_bm; // Capture on Event A and enable it
+    TCD0.INPUTCTRLA = 0x08;       //edge triggered
+    TCD0.INTCTRL = TCD_OVF_bm | TCD_TRIGA_bm;  // Enable interrupt on TRIGA (capture A)
+    TCD0.CTRLA = TCD_ENABLE_bm;
     
     sei();                                      // Enable global interrupt
     
@@ -57,6 +60,7 @@ int main(void) {
 }
 
 ISR(TCD0_TRIG_vect) {
+    PORTD.OUTTGL = PIN7_bm;
     TCD0.INTFLAGS = TCD_TRIGA_bm;
     value[count] = (TCD0.CAPTUREAH << 8) | TCD0.CAPTUREAL;
     distance[count] = (value[count] * 0.125) / 58; // Convert to cm times value by 0.125 to account for sys clk, I think 
