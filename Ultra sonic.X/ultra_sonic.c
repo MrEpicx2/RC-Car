@@ -29,30 +29,15 @@ int main(void) {
     TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
 
     PORTA.DIRSET = PIN0_bm;
-    PORTD.DIRSET = PIN7_bm;
-    PORTC.DIRCLR = PIN1_bm;
-    PORTC.PIN1CTRL = PORT_ISC_BOTHEDGES_gc;
     
-    /*
-    EVSYS.CHANNEL0 = 0x41;                      // PORTA pin 1 is set to channel 0, will be the incoming echo signal
-    EVSYS.USERTCB2CAPT = 0x01;                  // Select channel 0 for this user (1-1=0)
+    EVSYS.CHANNEL2 = 0x41;                      // PORTA pin 1 is set to channel 0, will be the incoming echo signal
+    EVSYS.USERTCB2CAPT = 0x03;                  // Select channel 0 for this user (3-1=2)
     
     // TCB2 will be used as the timer to process the echo signal from the ultra sonic sensor
     TCB2.INTCTRL = 0x01;                        // Capture interrupt enabled
     TCB2.EVCTRL = 0x01;                         // Enable input capture event
     TCB2.CTRLB = 0x04;                          // Input capture PW measurement mode
     TCB2.CTRLA = 0x01;                          // Uses clk with no division
-    */
-    
-    EVSYS.CHANNEL2 = EVSYS_CHANNEL2_PORTC_PIN1_gc;  // Route PC1 to Channel 0
-    EVSYS.USERTCD0INPUTA = EVSYS_USER_CHANNEL2_gc;
-    
-    TCD0.EVCTRLA = TCD_TRIGEI_bm | TCD_ACTION_bm; // Capture on Event A and enable it
-    TCD0.EVCTRLB = TCD_TRIGEI_bm | TCD_ACTION_bm;
-    TCD0.INPUTCTRLA = 0x08;       //edge triggered
-    TCD0.INPUTCTRLB = 0x08;
-    TCD0.INTCTRL = TCD_TRIGA_bm | TCD_TRIGB_bm;  // Enable interrupt on TRIGA (capture A)
-    TCD0.CTRLA = TCD_ENABLE_bm;
     
     sei();                                      // Enable global interrupt
     
@@ -60,42 +45,12 @@ int main(void) {
     }
 }
 
-ISR(TCD0_TRIG_vect) {
-    static uint16_t start_time = 0;
-
-    // Rising edge: echo pulse started
-    if (TCD0.INTFLAGS & TCD_TRIGA_bm) {
-        TCD0.INTFLAGS = TCD_TRIGA_bm;
-        start_time = (TCD0.CAPTUREAH << 8) | TCD0.CAPTUREAL;
-        PORTD.OUTSET = PIN7_bm; // Optional: turn LED on
-    }
-
-    // Falling edge: echo pulse ended
-    if (TCD0.INTFLAGS & TCD_TRIGB_bm) {
-        TCD0.INTFLAGS = TCD_TRIGB_bm;
-        uint16_t end_time = (TCD0.CAPTUREBH << 8) | TCD0.CAPTUREBL;
-        PORTD.OUTCLR = PIN7_bm; // Optional: turn LED off
-
-        uint16_t pulse_width;
-        if (end_time >= start_time) {
-            pulse_width = end_time - start_time;
-        } else {
-            // Handle timer overflow (16-bit wraparound)
-            pulse_width = (0xFFFF - start_time + end_time + 1);
-        }
-
-        // Convert to cm (pulse width in microseconds / 58 ? distance in cm)
-        // Each tick = 1 / 8 MHz = 0.125 µs ? pulse_width * 0.125 = time in µs
-        // distance = time / 58 = (pulse_width * 0.125) / 58
-        float time_us = pulse_width * 0.125f;
-        float distance_cm = time_us / 58.0f;
-
-        // Optionally store the result
-        value[count] = pulse_width;
-        distance[count] = (uint16_t)distance_cm;
-
-        count++;
-        if (count >= 5) count = 0;
+ISR(TCB2_INT_vect) {
+    TCB2.INTFLAGS = 0x01;
+    value[count] = TCB2.CCMP;
+    distance[count] = (value[count] * 0.125) / 58; // Convert to cm times value by 0.125 to account for sys clk, I think 
+    count++;
+    if (count >= 5) {
+        count = 0;
     }
 }
-
