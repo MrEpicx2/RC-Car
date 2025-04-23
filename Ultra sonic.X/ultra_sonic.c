@@ -26,10 +26,11 @@ int main(void) {
     
     // CMP0 will be for trigger and CMP1 will be for the servo
     
-    TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
+    //TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
 
     PORTA.DIRSET = PIN0_bm;
     
+    /*
     EVSYS.CHANNEL0 = 0x41;                      // PORTA pin 1 is set to channel 0, will be the incoming echo signal
     EVSYS.USERTCB2CAPT = 0x01;                  // Select channel 0 for this user (1-1=0)
     
@@ -38,6 +39,15 @@ int main(void) {
     TCB2.EVCTRL = 0x01;                         // Enable input capture event
     TCB2.CTRLB = 0x04;                          // Input capture PW measurement mode
     TCB2.CTRLA = 0x01;                          // Uses clk with no division
+    */
+    
+    EVSYS.CHANNEL2 = EVSYS_CHANNEL2_PORTC_PIN1_gc;  // Route PC1 to Async Channel 0
+    EVSYS.USERTCD0INPUTA = 0x03;
+    
+    TCD0.EVCTRLA = TCD_TRIGEI_bm; // Capture on Event A and enable it
+    TCD0.CTRLA = TCD_ENABLE_bm;
+    TCD0.CTRLB = TCD_WGMODE_ONERAMP_gc;     // no effect 
+    TCD0.INTCTRL = TCD_TRIGA_bm;  // Enable interrupt on TRIGA (capture A)
     
     sei();                                      // Enable global interrupt
     
@@ -45,9 +55,9 @@ int main(void) {
     }
 }
 
-ISR(TCB2_INT_vect) {
-    TCB2.INTFLAGS = 0x01;
-    value[count] = TCB2.CCMP;
+ISR(TCD0_TRIG_vect) {
+    TCD0.INTFLAGS = TCD_TRIGA_bm;
+    value[count] = (TCD0.CAPTUREAH << 8) | TCD0.CAPTUREAL;
     distance[count] = (value[count] * 0.125) / 58; // Convert to cm times value by 0.125 to account for sys clk, I think 
     count++;
     if (count >= 5) {
