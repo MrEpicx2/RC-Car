@@ -57,6 +57,9 @@ uint8_t combo_logic(void) {
     else if (is_button_held(&buttonBackward) && is_button_held(&buttonRight)) {
         combo = BACKWARD_RIGHT;
     }
+    else if (is_button_held(&buttonLight_R) && is_button_held(&buttonLight_L)) {
+        combo = TCB2_SWITCH;
+    }
     else if (is_button_held(&buttonForward)) {
         combo = FORWARD;
     }

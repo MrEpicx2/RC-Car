@@ -29,3 +29,4 @@ typedef struct {
 #define BACKWARD_RIGHT   (SignalCombo) {.port2 = &PORTD.IN, .mask2 = 0x10,} // PD4
 #define RIGHT_LIGHT      (SignalCombo) {.port1 = &PORTA.IN, .mask1 = 0x40, .port2 = &PORTD.IN, .mask2 = 0x10}   // PA6 | PD4
 #define LEFT_LIGHT       (SignalCombo) {.port1 = &PORTA.IN, .mask1 = 0x20, .port2 = &PORTD.IN, .mask2 = 0x10}   // PA5 | PD4
+#define TCB2_SWITCH      (SignalCombo) {.port1 = &PORTA.IN, .mask1 = 0x60, .port2 = &PORTD.IN, .mask2 = 0x10}   // PA5 | PA6 | PD4

@@ -8,10 +8,14 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
+#include "font.h"
+#include "lcd.h"
+#include "i2c_avr128db28.h"
 
-uint16_t value[5];
-uint8_t count = 0;
-uint16_t distance[5];       
+volatile uint16_t value[5];
+volatile uint8_t count = 0;
+volatile uint16_t distance[5];       
 
 int main(void) {
     CCP = 0xD8;                 // unlock protected I/O registers - page 41
@@ -28,9 +32,8 @@ int main(void) {
     
     TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
 
-    PORTA.DIRSET = PIN0_bm;
-    
-    EVSYS.CHANNEL2 = 0x41;                      // PORTA pin 1 is set to channel 0, will be the incoming echo signal
+    PORTA.DIRSET = PIN0_bm;    
+    EVSYS.CHANNEL2 = 0x41;                      // PORTC pin 1 is set to channel 0, will be the incoming echo signal
     EVSYS.USERTCB2CAPT = 0x03;                  // Select channel 0 for this user (3-1=2)
     
     // TCB2 will be used as the timer to process the echo signal from the ultra sonic sensor
@@ -39,9 +42,10 @@ int main(void) {
     TCB2.CTRLB = 0x04;                          // Input capture PW measurement mode
     TCB2.CTRLA = 0x01;                          // Uses clk with no division
     
-    sei();                                      // Enable global interrupt
-    
-    while (1) { 
+    sei();                                      // Enable global interrupt    
+    while (1) {
+        
+        
     }
 }
 

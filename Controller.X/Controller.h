@@ -28,3 +28,4 @@ Constants / Definitions
 #define BACKWARD_RIGHT  (uint8_t) ~(0x10)               // PD4 low
 #define RIGHT_LIGHT     (uint8_t) ~(0x02 | 0x10)        // PD1 and PD4 low
 #define LEFT_LIGHT      (uint8_t) ~(0x04 | 0x10)        // PD2 and PD4 low
+#define TCB2_SWITCH     (uint8_t) ~(0x02 | 0x04 | 0x10) // PD1, PD2, and PD4 low
