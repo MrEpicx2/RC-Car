@@ -26,7 +26,7 @@ int main(void) {
     
     // CMP0 will be for trigger and CMP1 will be for the servo
     
-    //TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
+    TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
 
     PORTA.DIRSET = PIN0_bm;
     
@@ -44,9 +44,10 @@ int main(void) {
     EVSYS.CHANNEL2 = EVSYS_CHANNEL2_PORTC_PIN1_gc;  // Route PC1 to Async Channel 0
     EVSYS.USERTCD0INPUTA = 0x03;
     
-    TCD0.EVCTRLA = TCD_TRIGEI_bm; // Capture on Event A and enable it
     TCD0.CTRLA = TCD_ENABLE_bm;
     TCD0.CTRLB = TCD_WGMODE_ONERAMP_gc;     // no effect 
+    TCD0.EVCTRLA = TCD_TRIGEI_bm; // Capture on Event A and enable it
+
     TCD0.INTCTRL = TCD_TRIGA_bm;  // Enable interrupt on TRIGA (capture A)
     
     sei();                                      // Enable global interrupt
