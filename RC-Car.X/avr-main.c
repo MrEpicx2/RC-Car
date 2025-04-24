@@ -11,11 +11,6 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdbool.h>
-#include <string.h>
-
-#include "font.h"
-#include "lcd.h"
-#include "i2c_avr128db28.h"
 #include "Reciever.h"
 
 //***********************************************GLOBALS******************************************************** 
@@ -26,12 +21,6 @@ bool bwd_on = false;
 bool right_light = false;
 bool left_light = false;
 
-bool tcb2_switch = false;
-
-volatile uint16_t value[5];
-volatile uint8_t count = 0;
-volatile uint16_t distance[5];
-
 ActionFunction output = NULL;
 void* output_arg = NULL;
 
@@ -40,7 +29,7 @@ void bwd(void* mode) {
         if (bwd_on == false) {
             for (uint8_t duty = 102; duty <= 254; duty++) {
                 TCB0.CCMPH = duty;
-                _delay_ms(10);
+                //_delay_ms(1);
             }
             bwd_on = true;
         }
@@ -58,7 +47,7 @@ void fwd(void* mode) {
         if (fwd_on == false) {
             for (uint8_t duty = 102; duty <= 254; duty++) {
                 TCB1.CCMPH = duty;
-                _delay_ms(10);
+                //_delay_ms(1);
             }
             fwd_on = true;
         }
@@ -81,7 +70,7 @@ void servo_right(void* unused){
 }
 
 void servo_left(void* unused) {
-    TCA0.SINGLE.CMP1 = 8124 / 100;
+    TCA0.SINGLE.CMP1 = 8000 / 100;
     /*
     for (uint16_t servo_pos = 4800; servo_pos <= 8124; servo_pos++) {
         TCA0.SINGLE.CMP1 = servo_pos / 100;
@@ -111,6 +100,7 @@ void bwd_right(void* mode) {
 }
 
 void R_light(void* unused) {
+    _delay_ms(500);
     if (right_light == false) {
         right_light = true;
         PORTD.OUTSET = PIN6_bm;
@@ -123,6 +113,7 @@ void R_light(void* unused) {
 }
 
 void L_light(void* unused) {
+    _delay_ms(500);
     if (left_light == false) {
         left_light = true;
         PORTD.OUTSET = PIN7_bm;
@@ -132,73 +123,6 @@ void L_light(void* unused) {
         left_light = false;
         PORTD.OUTCLR = PIN7_bm;
     }
-}
-
-void tcb_sw(void* unused) {
-    if (tcb2_switch == false) {
-        TCB2.INTCTRL = 0x01;                        // Capture interrupt enabled
-        TCB2.EVCTRL = 0x01;                         // Enable input capture event
-        TCB2.CTRLB = 0x04;                          // Input capture PW measurement mode
-        TCB2.CTRLA = 0x01;                          // Uses clk with no division
-        PORTD.OUTSET = PIN6_bm;
-        PORTD.OUTSET = PIN7_bm;
-        tcb2_switch = true;
-    }
-    
-    else if (tcb2_switch == true) {
-        TCB2.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PC0
-        TCB2.CCMPL = 31;    // 31250Hz / 10 = 10,000 Hz      
-        TCB2.CCMPH = 0;    // duty
-        TCB2.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);       // 31250 Hz from TCA
-        PORTD.OUTCLR = PIN6_bm;
-        PORTD.OUTCLR = PIN7_bm;
-        tcb2_switch = false;
-    }
-}
-
-uint8_t NumberToAscii(uint32_t u32Number_, uint8_t* pu8AsciiString_)
-{
-  bool bFoundDigit = false;
-  uint8_t au8AsciiNumber[11];
-  uint8_t u8CharCount = 0;
-  uint32_t u32Divider = 1000000000;
-  uint8_t u8Temp;
-  
-  /* Parse out all the digits, start counting after leading zeros */
-  for(uint8_t i = 0; i < 10; i++)
-  {
-    u8Temp = (u32Number_ / u32Divider);
-    
-    /* Check for first non-leading zero */
-    if(u8Temp != 0)
-    {
-      bFoundDigit = true;
-    }
-
-    /* As long as a non-leading zero has been found, add the ASCII char */
-    if(bFoundDigit)
-    {
-      au8AsciiNumber[u8CharCount] = u8Temp + 0x30;
-      u8CharCount++;
-    }
-    
-    /* Update for next iteration */
-    u32Number_ %= u32Divider;
-    u32Divider /= 10;
-  }
-  
-  /* Handle special case where u32Number == 0 */
-  if(!bFoundDigit)
-  {
-    u8CharCount = 1;
-    au8AsciiNumber[0] = '0';
-  }
-  
-  /* Add the null and copy to destination */
-  au8AsciiNumber[u8CharCount] = '\0';
-  strcpy((char *)pu8AsciiString_, (const char*)au8AsciiNumber);
-  
-  return(u8CharCount);
 }
 
 bool is_signal_combo_active(SignalCombo sig) {
@@ -216,13 +140,7 @@ void signal_check(void) {
         output = NULL;
         output_arg = NULL;
         
-        if (is_signal_combo_active(TCB2_SWITCH)) {
-            PORTA.OUTSET = PIN7_bm;
-            output = tcb_sw;
-            output_arg = NULL;
-        }
-        
-        else if (is_signal_combo_active(BACKWARD_LEFT)) {
+        if (is_signal_combo_active(BACKWARD_LEFT)) {
             PORTA.OUTSET = PIN7_bm;
             output = bwd_left;
             output_arg = (void*)1;
@@ -328,7 +246,7 @@ int main(void) {
     
     TCB0.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA2 H-
     TCB1.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PA3 H+
-    //TCB2.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PC0
+    TCB2.CTRLB = (TCB_CNTMODE_PWM8_gc) | (TCB_CCMPEN_bm);   // PWM mode and enable WO on PC0
     
     // CCMP High byte is the duty and low is the period
     
@@ -338,41 +256,18 @@ int main(void) {
     TCB1.CCMPL = 255;    // 4MHz / 255 = 15686 Hz      
     TCB1.CCMPH = 0;      // duty
     
-    //TCB2.CCMPL = 31;    // 31250Hz / 10 = 10,000 Hz      
-    //TCB2.CCMPH = 0;    // duty
+    TCB2.CCMPL = 31;    // 31250Hz / 10 = 10,000 Hz      
+    TCB2.CCMPH = 1;    // duty
 
     
     TCB0.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);       // 4MHz clk and enable TCB
     TCB1.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);
-    //TCB2.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);       // 31250 Hz from TCA
+    TCB2.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);       // 31250 Hz from TCA
     
     
     PORTA.DIRSET = PIN2_bm;
     PORTA.DIRSET = PIN3_bm;
     PORTC.DIRSET = PIN0_bm;
-    
-    
-    TCB2.INTCTRL = 0x01;                        // Capture interrupt enabled
-    TCB2.EVCTRL = 0x01;                         // Enable input capture event
-    TCB2.CTRLB = 0x04;                          // Input capture PW measurement mode
-    TCB2.CTRLA = 0x01;
-    
-    //*********************************************Screen SDA PC2 and SCL PC3 in i2c_avr128db28.c driver*************************************************************************
-    
-    
-    i2c_init(); // Initialize I2C
-
-    _delay_ms(500); // Give I2C some time before checking
-    
-    lcd_init();
-    lcd_clrscr();  // **Clear screen before writing**
-    lcd_gotoxy(0, 0);  // **Ensure cursor is at the start**
-    
-    lcd_puts("Hello World1");  // Put string from RAM
-    lcd_gotoxy(0, 2);         // Move cursor to line 3
-    lcd_puts_p(PSTR("String from flash")); 
-    _delay_ms(3000);
-    lcd_clrscr();
      
     
     //**************************************************************************ADC for metal dector****************************************************************************************
@@ -415,21 +310,12 @@ int main(void) {
     
     PORTD.DIRSET = PIN6_bm | PIN7_bm;        // Right headlight PD6 and left is PD7
     
-    //*****************************************************************Ultrasonic setup*********************************************************************************
-    
-    PORTC.DIRCLR = PIN1_bm;
-    EVSYS.CHANNEL2 = 0x41;                      // PORTC pin 1 is set to channel 0, will be the incoming echo signal
-    EVSYS.USERTCB2CAPT = 0x03;                  // Select channel 2 for this user (3-1=2)
-    sei();                                      // Enable global interrupt
-    
     //**********************************************************************LOCALS**************************************************************************************
     
     PORTA.DIRSET = PIN7_bm;
     PORTD.DIRSET = PIN5_bm;
     
     uint16_t adc_val = 0;
-    uint8_t number[5] = {9, 8, 7, 6, 5};
-    uint8_t string[4];
     while (1) {
         signal_check();
         
@@ -438,7 +324,7 @@ int main(void) {
             adc_val = ADC0.RES;        
         }
         
-        if (adc_val < 1205) {
+        if (adc_val < 1100) {
                 PORTD.OUTSET = PIN5_bm;
                 TCB2.CCMPH = 1;
                 TCB2.CCMPL = (adc_val / 38.5) + 1;
@@ -448,23 +334,5 @@ int main(void) {
             TCB2.CCMPH = 0;
             PORTD.OUTCLR = PIN5_bm;
         }
-        
-        for (uint8_t i = 0; i < 5; i++) {
-            NumberToAscii(distance[i], string);
-            lcd_puts(string);
-            lcd_puts(" CM");
-            _delay_ms(100);
-            lcd_clrscr();
-        }
-    }
-}
-
-ISR(TCB2_INT_vect) {
-    TCB2.INTFLAGS = 0x01;
-    value[count] = TCB2.CCMP;
-    distance[count] = (value[count] * 0.125) / 58; // Convert to cm times value by 0.125 to account for sys clk, I think 
-    count++;
-    if (count >= 5) {
-        count = 0;
     }
 }
