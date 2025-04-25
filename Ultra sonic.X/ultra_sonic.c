@@ -69,14 +69,14 @@ int main(void) {
     while (CLKCTRL.MCLKSTATUS & 0b00000001) {
     }
     
-    // ******************************************Servo and ultra sonic trigger on TCA0******************************************************************************************* 
-    TCA0.SINGLE.CTRLA = (TCA_SINGLE_CLKSEL_DIV64_gc) | (TCA_SINGLE_ENABLE_bm); // Divide 8MHz by 256 and enable TCA0
-    TCA0.SINGLE.CTRLB = (TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_CMP0EN_bm);  // Enable single slope PWM on CMP0 and CMP1
-    TCA0.SINGLE.PER = 125;                      // Frequency set to 50 Hz page 236: (31250/625) 625, being the PER value
+    // **************************************************Ultra sonic trigger on TCA0******************************************************************************************* 
+    TCA0.SINGLE.CTRLA = (TCA_SINGLE_CLKSEL_DIV64_gc) | (TCA_SINGLE_ENABLE_bm); // Divide 8MHz by 64 and enable TCA0
+    TCA0.SINGLE.CTRLB = (TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_CMP0EN_bm);  // Enable single slope PWM on CMP0
+    TCA0.SINGLE.PER = 125;                      // Frequency set to 1000 Hz page 236: (125000/125) =  1000, being the PER value
     
-    // CMP0 will be for trigger and CMP1 will be for the servo
+    // CMP0 will be for trigger
     
-    TCA0.SINGLE.CMP0 = 2;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
+    TCA0.SINGLE.CMP0 = 2;                       // 2/125000 = 16us should be fine
 
     PORTA.DIRSET = PIN0_bm;    
     EVSYS.CHANNEL2 = 0x41;                      // PORTC pin 1 is set to channel 0, will be the incoming echo signal
@@ -120,7 +120,7 @@ int main(void) {
 ISR(TCB2_INT_vect) {
     TCB2.INTFLAGS = 0x01;
     value[count] = TCB2.CCMP;
-    distance[count] = (value[count] * 0.125) / 58; // Convert to cm times value by 0.125 to account for sys clk, I think 
+    distance[count] = (value[count] * 0.125) / 58; // Convert to cm times value by 0.125 to account for sys clk
     count++;
     if (count >= 5) {
         count = 0;

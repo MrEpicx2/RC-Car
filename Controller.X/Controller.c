@@ -28,12 +28,12 @@ uint8_t combo = 0b0000;
 uint8_t prv_combo = 0b0000;
 
 bool is_button_held(ButtonState *btn) {
-    return btn->current && btn->previous;
+    return btn->current && btn->previous;       // The button must be being held if the 2 states are the same
 }
 
 void update_button_state(ButtonState *btn, volatile uint8_t *port_in, uint8_t pin_mask) {
     btn->previous = btn->current;
-    btn->current = (*port_in & pin_mask);
+    btn->current = (*port_in & pin_mask);       // if the pins in the port match the mask the button is on
 }
 
 uint8_t combo_logic(void) {
@@ -56,9 +56,6 @@ uint8_t combo_logic(void) {
     }
     else if (is_button_held(&buttonBackward) && is_button_held(&buttonRight)) {
         combo = BACKWARD_RIGHT;
-    }
-    else if (is_button_held(&buttonLight_R) && is_button_held(&buttonLight_L)) {
-        combo = TCB2_SWITCH;
     }
     else if (is_button_held(&buttonForward)) {
         combo = FORWARD;
@@ -92,9 +89,9 @@ int main(void) {
     while (1) {
         prv_combo = combo;
         combo = combo_logic();
-        if (prv_combo != combo) {
+        if (prv_combo != combo) {       // Reset transmitter if the combo changes
             PORTD.OUT = 0xFF;           // Set all lines HIGH to reset the encoder
-            _delay_ms(650);               // Brief delay for it to register release
+            _delay_ms(650);             // Brief delay for the transmitter to reset
         }
         PORTD.OUT = combo;
         _delay_ms(200);

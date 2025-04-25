@@ -11,7 +11,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdbool.h>
-#include "Reciever.h"
+#include "Receiver.h"
 
 //***********************************************GLOBALS******************************************************** 
 
@@ -24,16 +24,18 @@ bool left_light = false;
 ActionFunction output = NULL;
 void* output_arg = NULL;
 
+//***********************************************FUNCTIONS*******************************************************
+
 void bwd(void* mode) {
     if ((uint8_t)(uintptr_t) mode == 1) {
         if (bwd_on == false) {
-            for (uint8_t duty = 102; duty <= 254; duty++) {
+            for (uint8_t duty = 102; duty <= 254; duty++) {     // deliver current gradullay
                 TCB0.CCMPH = duty;
-                //_delay_ms(1);
+                _delay_ms(1);
             }
             bwd_on = true;
         }
-        else if (bwd_on == true)   TCB0.CCMPH = 255; 
+        else if (bwd_on == true)   TCB0.CCMPH = 255;            // make sure it doesn't loop again
     }
     
     else if ((uint8_t)(uintptr_t) mode == 0){
@@ -45,13 +47,13 @@ void bwd(void* mode) {
 void fwd(void* mode) {
     if ((uint8_t)(uintptr_t) mode == 1) {
         if (fwd_on == false) {
-            for (uint8_t duty = 102; duty <= 254; duty++) {
+            for (uint8_t duty = 102; duty <= 254; duty++) {     // deliver current gradullay
                 TCB1.CCMPH = duty;
-                //_delay_ms(1);
+                _delay_ms(1);
             }
             fwd_on = true;
         }
-        else if (fwd_on == true)   TCB1.CCMPH = 255; 
+        else if (fwd_on == true)   TCB1.CCMPH = 255;            // make sure it doesn't loop again
     }
     
     else if ((uint8_t)(uintptr_t) mode == 0){
@@ -62,20 +64,20 @@ void fwd(void* mode) {
 
 void servo_right(void* unused){
     TCA0.SINGLE.CMP1 = 1719 / 100;
-    /*
+    
     for (uint16_t servo_pos = 4800; servo_pos >= 1719; servo_pos--) {
         TCA0.SINGLE.CMP1 = servo_pos / 100;
         _delay_ms(1);
-    }*/
+    }
 }
 
 void servo_left(void* unused) {
     TCA0.SINGLE.CMP1 = 8000 / 100;
-    /*
+    
     for (uint16_t servo_pos = 4800; servo_pos <= 8124; servo_pos++) {
         TCA0.SINGLE.CMP1 = servo_pos / 100;
         _delay_ms(1);
-    }*/
+    }
 }
 
 void fwd_left(void* mode) {
@@ -100,7 +102,6 @@ void bwd_right(void* mode) {
 }
 
 void R_light(void* unused) {
-    _delay_ms(500);
     if (right_light == false) {
         right_light = true;
         PORTD.OUTSET = PIN6_bm;
@@ -113,7 +114,6 @@ void R_light(void* unused) {
 }
 
 void L_light(void* unused) {
-    _delay_ms(500);
     if (left_light == false) {
         left_light = true;
         PORTD.OUTSET = PIN7_bm;
@@ -126,9 +126,15 @@ void L_light(void* unused) {
 }
 
 bool is_signal_combo_active(SignalCombo sig) {
+    /*
+     * checks if a combination's port is set (in the header) and checks to see if the bits in the mask are high
+     * Automatically returns true if the port isn't set so the operation isn't blocked
+     */
     bool port1_check_1 = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
     bool port2_check_1 = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
-
+    
+    // check again for debouncing
+    
     bool port1_check_2 = sig.port1 ? ((*sig.port1 & sig.mask1) == sig.mask1) : true;
     bool port2_check_2 = sig.port2 ? ((*sig.port2 & sig.mask2) == sig.mask2) : true;
 
@@ -136,7 +142,8 @@ bool is_signal_combo_active(SignalCombo sig) {
 }
 
 void signal_check(void) {
-    
+// Actions done based on what signal combinations is active
+// MUST BE PRIORTIZED BASED ON THE HIGHEST NUMBER OF PINS USED FOR A COMBINATION TO LOWEST TO AVOID A MISREAD
         output = NULL;
         output_arg = NULL;
         
@@ -206,7 +213,7 @@ void signal_check(void) {
         
         
         else if (output == NULL) {
-            PORTA.OUTCLR = PIN7_bm;
+            PORTA.OUTCLR = PIN7_bm; // for debugging
             output_arg = NULL;
             output = fwd;
             output(output_arg);
@@ -226,19 +233,20 @@ int main(void) {
     }
     
     
-    // ******************************************Servo and ultra sonic trigger on TCA0******************************************************************************************* 
+    // *************************************************Servo and on TCA0******************************************************************************************* 
     TCA0.SINGLE.CTRLA = (TCA_SINGLE_CLKSEL_DIV256_gc) | (TCA_SINGLE_ENABLE_bm); // Divide 8MHz by 256 and enable TCA0
-    TCA0.SINGLE.CTRLB = (TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_CMP0EN_bm | TCA_SINGLE_CMP1EN_bm);  // Enable single slope PWM on CMP0 and CMP1
+    TCA0.SINGLE.CTRLB = (TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_CMP1EN_bm);  // Enable single slope PWM on CMP0 and CMP1
     TCA0.SINGLE.PER = 625;                      // Frequency set to 50 Hz page 236: (31250/625) 625, being the PER value
     
     // CMP0 will be for trigger and CMP1 will be for the servo
+    // Lines commented out have been moved to the ultrasonic file because of hardware constraints
     
-    TCA0.SINGLE.CMP0 = 1;                          // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
+    //TCA0.SINGLE.CMP0 = 1;                        // Can't get to 10us at this TCA0 frequency, shortest is 1/31250 = 32us. should be fine
     TCA0.SINGLE.CMP1 = 4800 / 100;                 // divide to avoid using decimals the compiler won't keep them
                                                    // min = 2.75% (17.18), +45° from min = 5.13% (32.03), 0° = 7.5% (46) but 48 is more accurate, +45° from 0 = 10.25% (64.06)
-                                                   // max = 13% (81.25) I will put these in a header file later to make it easier to use
+                                                   // max = 13% (81.25) 
     
-    PORTA.DIRSET = PIN0_bm;                      // PA0 and PA1 set as output
+    //PORTA.DIRSET = PIN0_bm;                        // PA0 and PA1 set as output
     PORTA.DIRSET = PIN1_bm;
     
     
@@ -256,13 +264,13 @@ int main(void) {
     TCB1.CCMPL = 255;    // 4MHz / 255 = 15686 Hz      
     TCB1.CCMPH = 0;      // duty
     
-    TCB2.CCMPL = 31;    // 31250Hz / 10 = 10,000 Hz      
-    TCB2.CCMPH = 1;    // duty
+    TCB2.CCMPL = 31;    // 31250Hz / 31 = 1008 Hz      
+    TCB2.CCMPH = 1;     // duty
 
     
     TCB0.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);       // 4MHz clk and enable TCB
     TCB1.CTRLA = (TCB_CLKSEL_DIV2_gc ) | (TCB_ENABLE_bm);
-    TCB2.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);       // 31250 Hz from TCA
+    TCB2.CTRLA = (TCB_CLKSEL_TCA0_gc ) | (TCB_ENABLE_bm);       // 31250 Hz from TCA needed for buzzer frequency range
     
     
     PORTA.DIRSET = PIN2_bm;
@@ -270,7 +278,7 @@ int main(void) {
     PORTC.DIRSET = PIN0_bm;
      
     
-    //**************************************************************************ADC for metal dector****************************************************************************************
+    //**************************************************************************ADC for metal detector****************************************************************************************
     
     // Enable global interrupts.
     SREG = 0b10000000;
@@ -291,44 +299,44 @@ int main(void) {
     ADC0.CTRLA = 0b00000011;
     
     // Start conversion.
-    ADC0.COMMAND = 0x01;
+    ADC0.COMMAND = 0x01;        // when converting this would also cause the ultrasonic not to work for some reason
     
     PORTD.DIRCLR = PIN2_bm;
     
     //****************************************************************Receiver set up***********************************************************************************
     
-    PORTA.PIN5CTRL |= PORT_PULLUPEN_bm;
-    PORTA.PIN6CTRL |= PORT_PULLUPEN_bm;
+    PORTA.PIN5CTRL = PORT_PULLUPEN_bm;      // makes sure pins aren't floating
+    PORTA.PIN6CTRL = PORT_PULLUPEN_bm;
     
-    PORTD.PIN4CTRL |= PORT_PULLUPEN_bm;
-    PORTD.PIN5CTRL |= PORT_PULLUPEN_bm;
+    PORTD.PIN4CTRL = PORT_PULLUPEN_bm;
+    PORTD.PIN5CTRL = PORT_PULLUPEN_bm;
     
     PORTA.DIRCLR = PIN5_bm | PIN6_bm;       // PA5 and PA6 as incoming receiver signal D1 and D0 respectivley
     PORTD.DIRCLR = PIN3_bm | PIN4_bm;       // PD4 and PD5 as incoming receiver signal D3 and D2 respectivley
     
-    //Miscellaneous
+    //*******************************************************************Miscellaneous**********************************************************************************
     
     PORTD.DIRSET = PIN6_bm | PIN7_bm;        // Right headlight PD6 and left is PD7
     
+    PORTA.DIRSET = PIN7_bm;                  // Debug lights
+    PORTD.DIRSET = PIN5_bm;   
     //**********************************************************************LOCALS**************************************************************************************
-    
-    PORTA.DIRSET = PIN7_bm;
-    PORTD.DIRSET = PIN5_bm;
-    
+ 
     uint16_t adc_val = 0;
     while (1) {
         signal_check();
         
+        //ADC logic
         if (ADC0.INTFLAGS & ADC_RESRDY_bm) {
             ADC0.INTFLAGS = 1;
             adc_val = ADC0.RES;        
         }
         
-        if (adc_val < 1100) {
-                PORTD.OUTSET = PIN5_bm;
-                TCB2.CCMPH = 1;
-                TCB2.CCMPL = (adc_val / 38.5) + 1;
-        }
+        if (adc_val < 1100) {                           // Calibrated so the metal detector doesn't detect the PCB
+                PORTD.OUTSET = PIN5_bm;                 // For debugging
+                TCB2.CCMPH = 1;                         // Just has to != 0 to be on, duty cycle has no effect on the buzzer
+                TCB2.CCMPL = (adc_val / 38.5) + 1;      // Change the frequency based on how close the metal is
+        }                                               // Adapted for TCB2 frequency (900 / 38.5) + 1 ? 24 then from TCB2 31250 / 41 ? 1.3 kHz
         
         else {
             TCB2.CCMPH = 0;

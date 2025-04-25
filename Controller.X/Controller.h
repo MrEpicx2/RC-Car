@@ -5,9 +5,8 @@
  * Created on April 20, 2025, 12:01 PM
  */
 
-/**********************************************************************************************************************
-Constants / Definitions
-**********************************************************************************************************************/
+// Various combinations the AVR can send to the transmitter
+// Transmitter sends signals based on if the pins are low so the masks are inverted
 
 #define RIGHT_BUTTON       (uint8_t) 0x40    // PA6
 #define LEFT_BUTTON        (uint8_t) 0x20    // PA5
@@ -28,4 +27,4 @@ Constants / Definitions
 #define BACKWARD_RIGHT  (uint8_t) ~(0x10)               // PD4 low
 #define RIGHT_LIGHT     (uint8_t) ~(0x02 | 0x10)        // PD1 and PD4 low
 #define LEFT_LIGHT      (uint8_t) ~(0x04 | 0x10)        // PD2 and PD4 low
-#define TCB2_SWITCH     (uint8_t) ~(0x02 | 0x04 | 0x10) // PD1, PD2, and PD4 low
+// scrapped #define TCB2_SWITCH     (uint8_t) ~(0x02 | 0x04 | 0x10) // PD1, PD2, and PD4 low

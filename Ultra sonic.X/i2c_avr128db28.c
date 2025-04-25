@@ -3,8 +3,6 @@
 
 void i2c_init(void) {
     
-    
-    
     // Set baud rate for 100kHz I2C communication
     TWI0.MBAUD = ((24000000 / (2 * 100000)) - 5); // Should be around 115
     
@@ -16,8 +14,9 @@ void i2c_init(void) {
     // Set SDA and SCL as outputs
     PORTMUX.TWIROUTEA = 0x0;
     PORTA.DIRSET = PIN2_bm | PIN3_bm;
+    //WILL NOT WORK WITH ULTRASONIC ON THE SAME PORT DUE TO SOME UNKNOWN INTERFERNENCE
     //PORTMUX.TWIROUTEA = 0x2;                //*********************PORT TO PC2 AND PC3******************************
-    //PORTC.DIRSET = PIN2_bm | PIN3_bm;       // page 164 of data sheet (ALT TWI0 pins PC2, PC3)
+    //PORTC.DIRSET = PIN2_bm | PIN3_bm;       // page 164 of data sheet (ALT TWI0 pins PC2, PC3) 
 }
 
 

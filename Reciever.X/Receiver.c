@@ -8,7 +8,7 @@
 
 #include <avr/io.h>
 #include <stdbool.h>
-#include "Reciever.h"
+#include "Receiver.h"
 
 
 bool is_signal_combo_active(SignalCombo sig) {
